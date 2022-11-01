@@ -1,8 +1,11 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{Tree, WindowState};
 
 /// A [`Surface`] is the highest level component in a [`DockState`](crate::DockState). [`Surface`]s represent an area
 /// in which nodes are placed. Typically, you're only using one surface, which is the main surface. However, if you drag
 /// a tab out in a way which creates a window, you also create a new surface in which nodes can appear.
+#[derive(Serialize, Deserialize)]
 pub enum Surface<Tab> {
     /// An empty surface, with nothing inside (practically, a null surface).
     Empty,
@@ -35,6 +38,17 @@ impl<Tab> Surface<Tab> {
             Surface::Empty => None,
             Surface::Main(tree) => Some(tree),
             Surface::Window(tree, _) => Some(tree),
+        }
+    }
+
+    pub fn map_tabs<F, NewTab>(&self, function: F) -> Surface<NewTab>
+    where
+        F: FnMut(&Tab) -> NewTab + Clone,
+    {
+        match self {
+            Surface::Empty => Surface::Empty,
+            Surface::Main(tree) => Surface::Main(tree.map_tabs(function)),
+            Surface::Window(tree, window_state) => Surface::Window(tree.map_tabs(function), window_state.clone()),
         }
     }
 }

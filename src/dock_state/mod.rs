@@ -8,6 +8,7 @@ pub mod surface;
 /// Window states which tells floating tabs how to be displayed inside their window,
 pub mod window_state;
 
+use serde::{Deserialize, Serialize};
 pub use surface::Surface;
 pub use surface_index::SurfaceIndex;
 pub use window_state::WindowState;
@@ -23,6 +24,7 @@ use crate::{Node, NodeIndex, Split, TabDestination, TabIndex, TabInsert, Tree};
 /// Indexing it with a [`SurfaceIndex`] will yield a [`Tree`] which then contains nodes and tabs.
 ///
 /// [`DockState`] is generic, so you can use any type of data to represent a tab.
+#[derive(Serialize, Deserialize)]
 pub struct DockState<Tab> {
     surfaces: Vec<Surface<Tab>>,
     focused_surface: Option<SurfaceIndex>, // Part of the tree which is in focus.
@@ -372,6 +374,25 @@ impl<Tab> DockState<Tab> {
             .iter()
             .filter_map(|tree| tree.node_tree())
             .flat_map(|nodes| nodes.iter())
+    }
+
+    /// Returns a new DockState while mapping the tab type
+    pub fn map_tabs<F, NewTab>(&self, function: F) -> DockState<NewTab>
+    where
+        F: FnMut(&Tab) -> NewTab + Clone,
+    {
+        let DockState {
+            surfaces,
+            focused_surface,
+        } = self;
+        let surfaces = surfaces
+            .iter()
+            .map(|surface| surface.map_tabs(function.clone()))
+            .collect();
+        DockState {
+            surfaces,
+            focused_surface: *focused_surface,
+        }
     }
 }
 
