@@ -184,6 +184,37 @@ impl<Tab> Node<Tab> {
     }
 }
 
+impl<Tab> Node<Tab> {
+    /// Returns a new node where each tab is passed through `function` first.
+    pub fn map_tabs<F, NewTab>(&self, function: F) -> Node<NewTab>
+    where
+        F: FnMut(&Tab) -> NewTab,
+    {
+        match self {
+            Node::Leaf {
+                rect,
+                viewport,
+                tabs,
+                active,
+            } => Node::Leaf {
+                rect: *rect,
+                viewport: *viewport,
+                tabs: tabs.iter().map(function).collect(),
+                active: *active,
+            },
+            Node::Empty => Node::Empty,
+            Node::Vertical { rect, fraction } => Node::Vertical {
+                rect: *rect,
+                fraction: *fraction,
+            },
+            Node::Horizontal { rect, fraction } => Node::Horizontal {
+                rect: *rect,
+                fraction: *fraction,
+            },
+        }
+    }
+}
+
 // ----------------------------------------------------------------------------
 
 /// Wrapper around indices to the collection of nodes inside a [`Tree`].
@@ -764,6 +795,24 @@ impl<Tab> Tree<Tab> {
                 Some(tab)
             }
             _ => None,
+        }
+    }
+}
+
+impl<Tab> Tree<Tab> {
+    /// Returns a new tree where each tab is passed through the `function` first.
+    pub fn map_tabs<F, NewTab>(&self, function: F) -> Tree<NewTab>
+    where
+        F: FnMut(&Tab) -> NewTab + Clone,
+    {
+        let Tree { focused_node, tree } = self;
+        let tree = tree
+            .iter()
+            .map(|node| node.map_tabs(function.clone()))
+            .collect();
+        Tree {
+            tree,
+            focused_node: *focused_node,
         }
     }
 }
