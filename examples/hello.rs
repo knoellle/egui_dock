@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use eframe::{egui, NativeOptions};
+use eframe::{egui, CreationContext, NativeOptions};
 use egui::{
     color_picker::{color_edit_button_srgba, Alpha},
     CentralPanel, ComboBox, Frame, Rounding, Slider, TopBottomPanel, Ui, WidgetText,
@@ -58,7 +58,7 @@ fn main() -> eframe::Result<()> {
     eframe::run_native(
         "My egui App",
         options,
-        Box::new(|_cc| Box::<MyApp>::default()),
+        Box::new(|cc| Box::<MyApp>::new(MyApp::new(cc))),
     )
 }
 
@@ -500,8 +500,8 @@ impl MyContext {
     }
 }
 
-impl Default for MyApp {
-    fn default() -> Self {
+impl MyApp {
+    fn new(cc: &CreationContext) -> Self {
         let mut dock_state =
             DockState::new(vec!["Simple Demo".to_owned(), "Style Editor".to_owned()]);
         dock_state.translations.tab_context_menu.eject_button = "Undock".to_owned();
@@ -529,6 +529,11 @@ impl Default for MyApp {
                 }
             }
         }
+
+        if let Some(text) = cc.storage.unwrap().get_string("dock") {
+            dock_state = serde_json::from_str(&text).unwrap();
+        }
+
         let context = MyContext {
             title: "Hello".to_string(),
             age: 24,
@@ -598,6 +603,10 @@ impl eframe::App for MyApp {
                     .show_window_collapse_buttons(self.context.show_window_collapse)
                     .show_inside(ui, &mut self.context);
             });
+    }
+
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        storage.set_string("dock", serde_json::to_string(&self.tree).unwrap());
     }
 }
 
